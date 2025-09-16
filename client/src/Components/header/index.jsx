@@ -170,7 +170,7 @@ function Header() {
                   }}
                   onClick={() => {
                     dispatch(logout());
-                    navigate("/login", { replace: true });
+                    navigate("/login");
                   }}
                 >
                   <LogoutIcon />

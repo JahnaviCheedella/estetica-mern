@@ -177,27 +177,26 @@ router.delete("/remove-from-cart/:id", async (req, res) => {
   }
 });
 
-router.get("/clear-cart", (req, res) => {
-  db.collection("cart").deleteMany({}, (err, result) => {
-    if (err) {
-      console.error("Error clearing cart:", err);
-      return res.status(500).json({ error: "Internal Server Error" });
-    }
+router.get("/clear-cart", async (req, res) => {
+  try {
+    const result = await db.collection("cart").deleteMany({});
     res.status(200).json({ message: "Cart cleared successfully." });
-  });
+  } catch (error) {
+    console.error("Error clearing cart:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 // fill database with products data and create collections users, products, cart if not exists using postman
 router.post("/initialize-data", async (req, res) => {
   try {
-
     const productsData = productsCollectionData;
     const results = {};
 
-    // Check for collections and create if they don't exist 
+    // Check for collections and create if they don't exist
     const requiredCollections = ["users", "products", "cart"];
     const collections = await db.listCollections().toArray();
-    const collectionNames = collections.map(c => c.name);
+    const collectionNames = collections.map((c) => c.name);
 
     for (const coll of requiredCollections) {
       if (!collectionNames.includes(coll)) {
@@ -210,24 +209,29 @@ router.post("/initialize-data", async (req, res) => {
     const productsCount = await db.collection("products").countDocuments();
     if (productsCount === 0) {
       console.log("Products collection is empty. Loading data from variable");
-      
+
       if (productsData && productsData.length > 0) {
-        const productResult = await db.collection("products").insertMany(productsData);
+        const productResult = await db
+          .collection("products")
+          .insertMany(productsData);
         results.products = { loadedFromVariable: productResult.insertedCount };
       }
     } else {
-      results.products = { status: "Collection already contains data. No action taken." };
+      results.products = {
+        status: "Collection already contains data. No action taken.",
+      };
     }
 
     console.log("Database initialization complete:", results);
     res.status(200).json({
       message: "Database initialization process completed.",
-      details: results
+      details: results,
     });
-
   } catch (error) {
     console.error("Data Initialization Error:", error);
-    res.status(500).json({ error: "Internal Server Error", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", details: error.message });
   }
 });
 

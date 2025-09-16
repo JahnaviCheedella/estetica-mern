@@ -168,12 +168,12 @@ const Home = () => {
 
   const sourceProducts = products?.length > 0 ? products : productCategories;
   const normalizedSearch = (searchItem || "").trim().toLowerCase();
-  const filteredProducts = sourceProducts.filter((product) => {
-    const matchesCategory = product.category === selectedCategory;
-    if (!matchesCategory) return false;
-    if (!normalizedSearch) return true;
-    return (product.name || "").toLowerCase().includes(normalizedSearch);
-  });
+  const filteredProducts = sourceProducts.filter(
+    (product) =>
+      product.category === selectedCategory &&
+      (!normalizedSearch ||
+        (product.name || "").toLowerCase().includes(normalizedSearch))
+  );
 
   return (
     <>
@@ -294,9 +294,7 @@ const Home = () => {
         </Grid>
 
         {status === "loading" && (
-          <Backdrop
-            sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-          >
+          <Backdrop sx={{ color: "#fff" }}>
             <CircularProgress color="inherit" />
           </Backdrop>
         )}

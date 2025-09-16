@@ -20,6 +20,8 @@ import { fetchBillingDetails } from "../../redux/slices/billingSlice";
 import { removeFromCartAndSync } from "../../redux/slices/homeSlice";
 import Backdrop from "@mui/material/Backdrop";
 import CircularProgress from "@mui/material/CircularProgress";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const productFields = (p) => [
   { label: "Quantity", value: p.quantity },
@@ -28,6 +30,86 @@ export const productFields = (p) => [
 ];
 
 const Billing = () => {
+  const formatAmount = (amount) => {
+    if (!amount) return "0.00";
+    const cleanedAmount = String(amount).replace(/[^0-9.]/g, "");
+    const num = parseFloat(cleanedAmount);
+    return isNaN(num) ? "0.00" : num.toFixed(2);
+  };
+
+  const handleGenerateInvoice = () => {
+    if (!billingDetails || billingDetails.length === 0) {
+      console.error("Billing details are missing.");
+      return;
+    }
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+    doc.setFontSize(18);
+    doc.setTextColor(108, 93, 211);
+    doc.text("Invoice", 297.5, 40, { align: "center" });
+
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Booking Summary - APT-001", 40, 70);
+
+    const tableColumn = ["Product", "Quantity", "Unit Price", "Total"];
+    const tableRows = billingDetails.map((p) => [
+      p.name,
+      p.quantity,
+      `Rs. ${formatAmount(p.price)}`,
+      `Rs. ${formatAmount(p.total)}`,
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 85,
+      theme: "grid",
+      headStyles: { fillColor: [108, 93, 211], textColor: 255 },
+      columnStyles: {
+        2: { halign: "right", columnWidth: 80 },
+        3: { halign: "right", columnWidth: 80 },
+      },
+      styles: { fontSize: 10, cellPadding: 5 },
+    });
+
+    const finalY = doc.lastAutoTable.finalY;
+
+    const summaryItems = [
+      ["Service Total", `Rs. ${formatAmount(serviceTotal)}`],
+      ["Product Total", `Rs. ${formatAmount(productTotal)}`],
+      ["Order Discount (%)", `${discountInPercent}`],
+      [`Tax (${taxInPercent}%)`, `Rs. ${formatAmount(taxAmount)}`],
+      [
+        "Final Total (after discount)",
+        `Rs. ${formatAmount(finalTotalAfterDiscount)}`,
+      ],
+      [
+        { content: "Grand Total", styles: { fontStyle: "bold" } },
+        {
+          content: `Rs. ${formatAmount(grandTotal)}`,
+          styles: { fontStyle: "bold" },
+        },
+      ],
+    ];
+
+    autoTable(doc, {
+      body: summaryItems,
+      startY: finalY + 20,
+      theme: "plain", // No borders for a clean look
+      showHead: false, // No header row
+      columnStyles: {
+        0: { halign: "left" },
+        1: { halign: "right" }, // Perfect right alignment for amounts
+      },
+      styles: { fontSize: 11 },
+      margin: { left: 40 }, // Align with the start of the product table
+    }); // --- Save the PDF ---
+
+    doc.save("Invoice_APT-001.pdf");
+  };
+
   const navigate = useNavigate();
   const {
     billingDetails = [],
@@ -377,6 +459,7 @@ const Billing = () => {
                   py: 1.5,
                   gap: 1,
                 }}
+                onClick={handleGenerateInvoice}
               >
                 <AutoAwesomeIcon sx={{ fontSize: "small" }} />
                 Complete Payment
